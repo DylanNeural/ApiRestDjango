@@ -12,6 +12,7 @@ from django.db import transaction
 import requests
 
 DATE_FMT = "%d/%m/%Y"  # JJ/MM/AAAA
+User = get_user_model()
 
 def _serialize(userJson: Users):
     return {
@@ -38,6 +39,17 @@ def _parse_int_or_400(v, name):
         return int(v)
     except Exception:
         raise ValueError(f"{name} doit être un entier")
+    
+def _is_self(request, target_user: Users) -> bool:
+    
+    """
+    Autorise si l'appelant est connecté ET propriétaire du profil.
+    """
+    if not request.user.is_authenticated:
+        return False
+    # si Users.account n'est pas encore renseigné, refuse par défaut
+    return (target_user.account_id == request.user.id)
+
 
 def _is_self_or_admin(request, target_user: Users) -> bool:
     
@@ -260,7 +272,6 @@ def dossier_sante(request, pk: int):
     return HttpResponseNotAllowed(["GET", "POST", "PATCH", "DELETE"])
 
 
-User = get_user_model()
 
 def login_required_json(view):
     @wraps(view)
@@ -369,6 +380,32 @@ def me_json(request):
                          "age": u.profile_user.age if hasattr(u, "profile_user") else None,
                          "dateAnniversaire": u.profile_user.dateAnniversaire.strftime(DATE_FMT) if hasattr(u, "profile_user") else None,
                          })
+
+
+_is_self
+@csrf_exempt
+def change_password_json(request):
+    if request.method != "PATCH":
+        return JsonResponse({"detail": "Method not allowed"}, status=405)
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "Authentication required"}, status=401)
+    try:
+        body = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return HttpResponseBadRequest("JSON invalide")
+
+    old_password = body.get("old_password")
+    new_password = body.get("new_password")
+    if not old_password or not new_password:
+        return HttpResponseBadRequest("old_password et new_password sont requis")
+
+    user = request.user
+    if not user.check_password(old_password):
+        return JsonResponse({"detail": "Old password is incorrect"}, status=400)
+
+    user.set_password(new_password)
+    user.save()
+    return JsonResponse({"detail": "Password changed successfully"})
 
 # authentification 
 # route qu'un user peut et l'autre non 

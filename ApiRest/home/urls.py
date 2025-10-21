@@ -9,4 +9,5 @@ urlpatterns = [
     path("auth/login/", views.login_json),
     path("auth/logout/", views.logout_json),
     path("auth/me/", views.me_json),
+    path("auth/change_password/", views.change_password_json),
 ]
