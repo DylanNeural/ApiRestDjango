@@ -48,11 +48,11 @@ python manage.py migrate
 5) 
 python manage.py runserver
 
--http://127.0.0.1:8000/
+- http://127.0.0.1:8000/ La collection POSTMAN EST RÉGLÉ SUR LE PORT 8020
 
--Commande qui modifie le port en cas de conflit avec une autre application
+- Commande qui modifie le port en cas de conflit avec une autre application
 
--python manage.py runserver 8001
+- python manage.py runserver 8001
 
 
 # Modèles
@@ -95,6 +95,9 @@ POST   /api/users/<int:pk>/dossier/    → créer dossier santé (si absent)
 PATCH  /api/users/<int:pk>/dossier/    → modifier dossier santé
 
 DELETE /api/users/<int:pk>/dossier/    → supprimer dossier santé
+
+
+(Ajouter les path d'auth)
 
 Une collection de test POSTMAN est disponible a la racine[text](CollectionDeTest.json)
 
