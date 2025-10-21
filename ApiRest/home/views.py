@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from functools import wraps
 from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.db import transaction
-
+import requests
 
 DATE_FMT = "%d/%m/%Y"  # JJ/MM/AAAA
 
@@ -51,6 +51,16 @@ def _is_self_or_admin(request, target_user: Users) -> bool:
     # si Users.account n'est pas encore renseigné, refuse par défaut
     return (target_user.account_id == request.user.id)
 
+def _is_admin(request, target_user: Users) -> bool:
+    
+    """
+    Autorise si l'appelant est connecté ET (admin).
+    """
+    if not request.user.is_authenticated:
+        return False
+    if request.user.is_admin:
+        return True
+
 def _auth_required_json(view):
     # version JSON de login_required (évite la redirection HTML)
     from functools import wraps
@@ -91,6 +101,7 @@ def users_collection(request):
             return HttpResponseBadRequest(str(e))
 
     return HttpResponseNotAllowed(["POST"])
+
 
 @csrf_exempt
 def users_detail(request, pk: str):
@@ -148,6 +159,7 @@ def _serialize_dossier(ds: DossierSante) -> dict:
         "groupe_sanguin": ds.groupe_sanguin or "",
         "allergies": ds.allergies or "",
         "medecin_traitant": ds.medecin_traitant or "",
+        "department_medical": ds.department_medical or "",
     }
 
 
@@ -182,6 +194,26 @@ def dossier_sante(request, pk: int):
         return JsonResponse(_serialize_dossier(ds))
 
     if request.method == "POST":
+        try:
+            body = _parse_body(request)
+
+
+            id_val = body.get("id", None)
+
+            u = Users(
+                prenom = body.get("prenom", ""),
+                age = _parse_int_or_400(body.get("age"), "age"),
+                dateAnniversaire = _parse_date_or_400(body.get("dateAnniversaire")),
+            )
+
+            if hasattr(Users, "id") and id_val is not None:
+                u.id = id_val
+
+            u.save()
+
+        except ValueError as e:
+            return HttpResponseBadRequest(str(e))
+        
         ds = _get_dossier_or_none(user)
         if ds is not None:
             return JsonResponse({"detail": "Dossier already exists"}, status=409)
@@ -215,6 +247,7 @@ def dossier_sante(request, pk: int):
             ds.allergies = body.get("allergies") or ""
         if "medecin_traitant" in body:
             ds.medecin_traitant = body.get("medecin_traitant") or ""
+            
         ds.save()
         return JsonResponse(_serialize_dossier(ds))
 
@@ -273,14 +306,27 @@ def signup_json(request):
 
         profile = Users.objects.create(
             account=auth_user,          # OneToOne vers l'utilisateur d'auth
-            prenom=username,
+            prenom=prenom,
             age=age,
             dateAnniversaire=dateAnniversaire,  # adapte au nom exact de ton champ
         )
+        
+        r = requests.get(
+            "https://smt.esante.gouv.fr/api/terminologies/search",
+            params={"searchedText": "BDPM", "pagination": 1, "size": 10},
+            timeout=10
+        )
+        
+        r.raise_for_status()
+        data = r.json()
+        first_theme = (data.get("terminologies") or [{}])[0].get("theme")
+
+        DossierSante.objects.create(user=profile, department_medical = first_theme)  # crée un dossier santé vide
 
     return JsonResponse({
         "auth": {"id": auth_user.pk, "username": auth_user.username, "email": auth_user.email},
         "profile": {
+            "id": profile.pk,
             "prenom": profile.prenom,
             "age": profile.age,
             "dateAnniversaire": profile.dateAnniversaire.strftime(DATE_FMT),

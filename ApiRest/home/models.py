@@ -30,6 +30,7 @@ class DossierSante(models.Model):
     groupe_sanguin = models.CharField(max_length=3, blank=True)
     allergies = models.TextField(blank=True)
     medecin_traitant = models.CharField(max_length=120, blank=True)
+    department_medical = models.CharField(max_length=120, blank=True)
     
 
     def __str__(self):

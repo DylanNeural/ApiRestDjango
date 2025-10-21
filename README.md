@@ -7,6 +7,15 @@ Users (CRUD basique)
 DossierSante (relation 1–1 avec un user & CRUD classique)
 
 
+
+L'API permet a un visiteur de se creer un profil pour pouvoir survoler le site web(non crée),
+il a également la possibilité de se creer un compte en ajoutant ***prenom*** ***age*** ***adresse*** ***dateAnniversaire*** ***username*** ***password*** ***email***
+, l'api va automatiquement l'inscrire et lui creer un compte **User**.
+Lorsque que l'utilisateur s'inscrit Son compte User est également crée et unn dossier santé vide est également crée et attribué a l'utilisateur
+Un utilisateur ne peut voir que son propre dossier santé 
+Un administrateur possède tout les accès sur tout les utilisateurs
+
+
 # Prérequis
 
 Python 3.10+ (idéalement 3.11+)
@@ -87,11 +96,14 @@ PATCH  /api/users/<int:pk>/dossier/    → modifier dossier santé
 
 DELETE /api/users/<int:pk>/dossier/    → supprimer dossier santé
 
-Une collection de test POSTMAN sera bientot Disponible : POSTMAN KO :( 
+Une collection de test POSTMAN est disponible a la racine[text](CollectionDeTest.json)
 
 
 Attention l'endpoint doit bien terminer par un "/"
+Le cookie de connexion ***sessionid*** expire au bout de 2 Semaine (1209600 secondes)
 
+Encodage du password en pbkf2 SHA256
+![alt text](image.png)
 
 # Reste a faire
 - Documenter le code
