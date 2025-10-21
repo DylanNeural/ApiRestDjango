@@ -287,9 +287,9 @@
 			"response": []
 		},
 		{
-			"name": "Post Logout",
+			"name": "PATCH Change Password",
 			"request": {
-				"method": "POST",
+				"method": "PATCH",
 				"header": [],
 				"body": {
 					"mode": "raw",
@@ -309,6 +309,35 @@
 						"api",
 						"auth",
 						"signup",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Post Logout",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/auth/logout/",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"logout",
 						""
 					]
 				}
@@ -342,6 +371,133 @@
 						"auth",
 						"me",
 						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Post Connexion Admin",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"username\": \"root\",\r\n  \"password\": \"root!\",\r\n  \"email\": \"root@root.root\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/auth/login/",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"auth",
+						"login",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Test API Santé",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://smt.esante.gouv.fr/api/terminologies/search?searchedText=ATC&pagination=1&size=10",
+					"protocol": "https",
+					"host": [
+						"smt",
+						"esante",
+						"gouv",
+						"fr"
+					],
+					"path": [
+						"api",
+						"terminologies",
+						"search"
+					],
+					"query": [
+						{
+							"key": "searchedText",
+							"value": "ATC"
+						},
+						{
+							"key": "pagination",
+							"value": "1"
+						},
+						{
+							"key": "size",
+							"value": "10"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Test API Santé Copy",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://smt.esante.gouv.fr/api/terminologies/search?searchedText=ATC&pagination=1&size=10",
+					"protocol": "https",
+					"host": [
+						"smt",
+						"esante",
+						"gouv",
+						"fr"
+					],
+					"path": [
+						"api",
+						"terminologies",
+						"search"
+					],
+					"query": [
+						{
+							"key": "searchedText",
+							"value": "ATC"
+						},
+						{
+							"key": "pagination",
+							"value": "1"
+						},
+						{
+							"key": "size",
+							"value": "10"
+						}
 					]
 				}
 			},
