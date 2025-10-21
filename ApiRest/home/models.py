@@ -1,8 +1,19 @@
 # home/models.py
 from django.db import models
+from django.conf import settings
+
+
+
+
 
 class Users(models.Model):
-    id = models.CharField(primary_key=True, max_length=120)
+    account = models.OneToOneField(          # ← lien vers l’utilisateur d’auth
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="profile_user",
+        null=True, blank=True,               # (null/blank le temps de migrer)
+    )
+    
     prenom = models.CharField(max_length=30)
     age = models.IntegerField()
     dateAnniversaire = models.DateField()

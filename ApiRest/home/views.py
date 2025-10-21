@@ -5,20 +5,25 @@ from django.views.decorators.csrf import csrf_exempt
 from .models import Users
 from django.core.exceptions import ObjectDoesNotExist
 from .models import Users, DossierSante
+from django.contrib.auth.models import User
+from functools import wraps
+from django.contrib.auth import authenticate, login, logout, get_user_model
+from django.db import transaction
+
 
 DATE_FMT = "%d/%m/%Y"  # JJ/MM/AAAA
 
-def _serialize(u: Users):
+def _serialize(userJson: Users):
     return {
-        "id": u.id,  # ton champ id (string) si tu l'as gardé ; sinon la PK auto de Django
-        "prenom": u.prenom,
-        "age": u.age,
-        "dateAnniversaire": u.dateAnniversaire.strftime(DATE_FMT),
+        "id": userJson.id,
+        "prenom": userJson.prenom,
+        "age": userJson.age,
+        "dateAnniversaire": userJson.dateAnniversaire.strftime(DATE_FMT),
     }
 
-def _parse_body(request):
+def _parse_body(req):
     try:
-        return json.loads(request.body.decode("utf-8"))
+        return json.loads(req.body.decode("utf-8"))
     except Exception:
         raise ValueError("JSON invalide")
 
@@ -33,6 +38,28 @@ def _parse_int_or_400(v, name):
         return int(v)
     except Exception:
         raise ValueError(f"{name} doit être un entier")
+
+def _is_self_or_admin(request, target_user: Users) -> bool:
+    
+    """
+    Autorise si l'appelant est connecté ET (admin) OU (propriétaire du profil).
+    """
+    if not request.user.is_authenticated:
+        return False
+    if request.user.is_staff:
+        return True
+    # si Users.account n'est pas encore renseigné, refuse par défaut
+    return (target_user.account_id == request.user.id)
+
+def _auth_required_json(view):
+    # version JSON de login_required (évite la redirection HTML)
+    from functools import wraps
+    @wraps(view)
+    def w(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({"detail": "Authentication required"}, status=401)
+        return view(request, *args, **kwargs)
+    return w
 
 @csrf_exempt
 def users_collection(request):
@@ -123,27 +150,30 @@ def _serialize_dossier(ds: DossierSante) -> dict:
         "medecin_traitant": ds.medecin_traitant or "",
     }
 
+
 def _get_dossier_or_none(user: Users):
     try:
         return user.dossier_sante
     except ObjectDoesNotExist:
         return None
-
+    
+    
+@_auth_required_json
 @csrf_exempt
 def dossier_sante(request, pk: int):
-    """
-    /api/users/<int:pk>/dossier/
-      GET    -> retourne le dossier (404 si absent)
-      POST   -> crée le dossier si absent (201) ; 409 s'il existe déjà
-      PATCH  -> met à jour les champs fournis (404 si absent)
-      DELETE -> supprime le dossier (204), idempotent
-    """
+
+    
     # 1) récupérer l'utilisateur
     try:
         user = Users.objects.get(pk=pk)
     except Users.DoesNotExist:
         return JsonResponse({"detail": "User not found"}, status=404)
 
+
+    if not _is_self_or_admin(request, user):
+        return JsonResponse({"detail": "Forbidden"}, status=403)
+    
+    
     # 2) router
     if request.method == "GET":
         ds = _get_dossier_or_none(user)
@@ -195,3 +225,104 @@ def dossier_sante(request, pk: int):
         return JsonResponse({}, status=204)
 
     return HttpResponseNotAllowed(["GET", "POST", "PATCH", "DELETE"])
+
+
+User = get_user_model()
+
+def login_required_json(view):
+    @wraps(view)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({"detail": "Authentication required"}, status=401)
+        return view(request, *args, **kwargs)
+    return wrapper
+
+@csrf_exempt
+def signup_json(request):
+    if request.method != "POST":
+        return JsonResponse({"detail": "Method not allowed"}, status=405)
+
+    try:
+        body = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return HttpResponseBadRequest("JSON invalide")
+
+    # champs auth
+    username = (body.get("username") or "").strip()
+    password = body.get("password") or ""
+    email    = (body.get("email") or "").strip()
+
+    if not username or not password:
+        return HttpResponseBadRequest("username et password sont requis")
+    if User.objects.filter(username=username).exists():
+        return JsonResponse({"detail": "username déjà pris"}, status=400)
+
+    # champs profil Users
+    try:
+        prenom  = (body.get("prenom") or "").strip()
+        age     = int(body["age"])
+        dateAnniversaire = _parse_date_or_400(body["dateAnniversaire"])   # JJ/MM/AAAA
+    except KeyError as e:
+        return HttpResponseBadRequest(f"Champ manquant: {e}")
+    except ValueError:
+        return HttpResponseBadRequest("age doit être un entier et dateAnniversaire au format JJ/MM/AAAA")
+
+    # tout ou rien
+    with transaction.atomic():
+        auth_user = User.objects.create_user(username=username, email=email, password=password)
+
+        profile = Users.objects.create(
+            account=auth_user,          # OneToOne vers l'utilisateur d'auth
+            prenom=username,
+            age=age,
+            dateAnniversaire=dateAnniversaire,  # adapte au nom exact de ton champ
+        )
+
+    return JsonResponse({
+        "auth": {"id": auth_user.pk, "username": auth_user.username, "email": auth_user.email},
+        "profile": {
+            "prenom": profile.prenom,
+            "age": profile.age,
+            "dateAnniversaire": profile.dateAnniversaire.strftime(DATE_FMT),
+        }
+    }, status=201)
+    
+
+@csrf_exempt
+def login_json(request):
+    if request.method != "POST":
+        return JsonResponse({"detail": "Method not allowed"}, status=405)
+    try:
+        body = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return HttpResponseBadRequest("JSON invalide")
+
+    username = body.get("username")
+    password = body.get("password")
+    user = authenticate(request, username=username, password=password)
+    if not user:
+        return JsonResponse({"detail": "Invalid credentials"}, status=401)
+
+    login(request, user)  # crée une session + envoie un cookie
+    return JsonResponse({"detail": "ok", "user": {"id": user.pk, "username": user.username}})
+
+@csrf_exempt
+def logout_json(request):
+    if request.method != "POST":
+        return JsonResponse({"detail": "Method not allowed"}, status=405)
+    logout(request)
+    return JsonResponse({"detail": "ok"})
+
+@login_required_json
+def me_json(request):
+    u = request.user
+    return JsonResponse({"id": u.pk,
+                         "username": u.username,
+                         "email": u.email,
+                         "prenom": u.profile_user.prenom if hasattr(u, "profile_user") else None,
+                         "age": u.profile_user.age if hasattr(u, "profile_user") else None,
+                         "dateAnniversaire": u.profile_user.dateAnniversaire.strftime(DATE_FMT) if hasattr(u, "profile_user") else None,
+                         })
+
+# authentification 
+# route qu'un user peut et l'autre non 

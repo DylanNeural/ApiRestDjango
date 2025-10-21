@@ -50,6 +50,10 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+LOGIN_URL = "/accounts/login/"
+LOGIN_REDIRECT_URL = "/"          # où rediriger après login (pour un site)
+LOGOUT_REDIRECT_URL = "/"
+
 ROOT_URLCONF = 'ApiRest.urls'
 
 TEMPLATES = [
