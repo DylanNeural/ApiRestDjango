@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <title>Liste des tâches</title>
+</head>
+<body>
+    <h1>Mes tâches (sans auth)</h1>
+
+    <button id="loadTasks">Charger les tâches</button>
+
+    <ul id="tasksList"></ul>
+
+    <script>
+        document.getElementById("loadTasks").addEventListener("click", () => {
+            fetch("/api/tasks/")
+                .then(response => response.json())
+                .then(data => {
+                    const ul = document.getElementById("tasksList");
+                    ul.innerHTML = "";
+                    data.forEach(task => {
+                        const li = document.createElement("li");
+                        li.textContent = `#${task.id} - ${task.title} (${task.completed ? "✅" : "❌"})`;
+                        ul.appendChild(li);
+                    });
+                })
+                .catch(err => console.error(err));
+        });
+    </script>
+</body>
+</html>

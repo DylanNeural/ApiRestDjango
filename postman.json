@@ -1,0 +1,612 @@
+{
+	"info": {
+		"_postman_id": "fa9b3712-5c47-49fb-bfc2-1d08aaab4e4d",
+		"name": "Django Task API (JWT + CRUD)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "49403496",
+		"_collection_link": "https://leagueofskyday-9100588.postman.co/workspace/leagueofskyday's-Workspace~940d43b2-c274-4e91-88e2-f5a8e546b9df/collection/49403496-fa9b3712-5c47-49fb-bfc2-1d08aaab4e4d?action=share&source=collection_link&creator=49403496"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Signup (Register)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"testuser@example.com\",\n  \"password\": \"motdepasse123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/signup/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"signup",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login (Obtain access + refresh)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Login OK\", function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"let data = {};",
+									"try {",
+									"  data = pm.response.json();",
+									"} catch (e) {",
+									"  console.log('Response is not JSON');",
+									"}",
+									"",
+									"if (data && data.access) {",
+									"  pm.collectionVariables.set('access_token', data.access);",
+									"  console.log('access_token set');",
+									"} else {",
+									"  console.warn('No access token found in response');",
+									"}",
+									"",
+									"if (data && data.refresh) {",
+									"  pm.collectionVariables.set('refresh_token', data.refresh);",
+									"  console.log('refresh_token set');",
+									"} else {",
+									"  console.warn('No refresh token found in response');",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"motdepasse123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/token/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"token",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token (Get new access)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Refresh OK\", function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"let data = {};",
+									"try {",
+									"  data = pm.response.json();",
+									"} catch (e) {",
+									"  console.log('Response is not JSON');",
+									"}",
+									"",
+									"if (data && data.access) {",
+									"  pm.collectionVariables.set('access_token', data.access);",
+									"  console.log('access_token mis à jour');",
+									"} else {",
+									"  console.warn('Pas de access dans la réponse du refresh');",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/token/refresh/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"token",
+								"refresh",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Auth - Me (Profil de l'utilisateur connecté)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Auth /me OK\", function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"",
+									"let data = {};",
+									"try {",
+									"  data = pm.response.json();",
+									"} catch (e) {",
+									"  console.log('Response is not JSON');",
+									"}",
+									"",
+									"if (data && data.id) {",
+									"  pm.collectionVariables.set('user_id', data.id);",
+									"  console.log('user_id enregistré : ' + data.id);",
+									"} else {",
+									"  console.warn('Pas de id utilisateur dans la réponse /auth/me');",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/me/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"me",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout (Blacklist refresh token)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Logout OK\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([200, 205]);",
+									"});",
+									"",
+									"// On nettoie les tokens côté collection",
+									"pm.collectionVariables.unset('access_token');",
+									"pm.collectionVariables.unset('refresh_token');",
+									"console.log('Tokens nettoyés après logout');"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/logout/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"logout",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Tasks",
+			"item": [
+				{
+					"name": "List Tasks",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"List tasks OK\", function () {",
+									"  pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tasks/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tasks",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Task",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Create task OK\", function () {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"",
+									"let data = {};",
+									"try {",
+									"  data = pm.response.json();",
+									"} catch (e) {",
+									"  console.log('Response is not JSON');",
+									"}",
+									"",
+									"if (data && data.id) {",
+									"  pm.collectionVariables.set('last_task_id', data.id);",
+									"  console.log('last_task_id enregistré : ' + data.id);",
+									"} else {",
+									"  console.warn('Pas de id dans la réponse de création de tâche');",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Ma première tâche\",\n  \"description\": \"Ceci est une tâche créée via Postman\",\n  \"completed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tasks",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Task by ID (last_task_id)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Get task OK\", function () {",
+									"  pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tasks/{{last_task_id}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tasks",
+								"{{last_task_id}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Task (PUT)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Update task (PUT) OK\", function () {",
+									"  pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Tâche mise à jour (PUT)\",\n  \"description\": \"Description modifiée\",\n  \"completed\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/{{last_task_id}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tasks",
+								"{{last_task_id}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Partial Update Task (PATCH)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Update task (PATCH) OK\", function () {",
+									"  pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"completed\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/tasks/{{last_task_id}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tasks",
+								"{{last_task_id}}",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Task (admin seulement côté API)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Delete task OK (204 ou 403 si pas admin)\", function () {",
+									"  pm.expect(pm.response.code).to.be.oneOf([204, 403]);",
+									"});",
+									"",
+									"// Si la suppression a réussi, on nettoie last_task_id",
+									"if (pm.response.code === 204) {",
+									"  pm.collectionVariables.unset('last_task_id');",
+									"  console.log('Tâche supprimée, last_task_id nettoyé');",
+									"} else {",
+									"  console.warn('Suppression refusée (probablement pas admin)');",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/tasks/{{last_task_id}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"tasks",
+								"{{last_task_id}}",
+								""
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "API tierce - External Tasks",
+			"item": [
+				{
+					"name": "Liste tasks externes (GET /api/external-tasks/)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/external-tasks/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"external-tasks",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Liste tasks externes par userId (GET /api/external-tasks/?userId=1)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/external-tasks/?userId=1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"external-tasks",
+								""
+							],
+							"query": [
+								{
+									"key": "userId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://127.0.0.1:8000/api"
+		},
+		{
+			"key": "user_id",
+			"value": ""
+		}
+	]
+}
